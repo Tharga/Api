@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="azure-pipelines.yml" />
+    <File Path="buildnumber.yml" />
     <File Path="README.md" />
   </Folder>
   <Project Path="Tharga.Api.Tests/Tharga.Api.Tests.csproj" />
