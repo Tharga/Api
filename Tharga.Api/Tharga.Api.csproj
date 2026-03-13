@@ -30,7 +30,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
@@ -39,8 +39,5 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.5" />
     <PackageReference Include="Tharga.MongoDB" Version="2.8.5-pre.19" />
     <PackageReference Include="Tharga.Toolkit" Version="1.15.18" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Blazor\Tharga.Blazor\Tharga.Blazor.csproj" />
   </ItemGroup>
 </Project>

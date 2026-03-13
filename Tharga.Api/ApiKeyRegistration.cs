@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
-using Tharga.Blazor.Framework;
 
 namespace Tharga.Api;
 

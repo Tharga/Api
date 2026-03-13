@@ -1,4 +1,4 @@
-using Tharga.Blazor.Framework;
+using Tharga.Api;
 using Tharga.Toolkit.Password;
 
 namespace Tharga.Api.Tests;

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Tharga.Blazor.Framework;
+using Tharga.Api;
 
 namespace Tharga.Api.Tests;
 
