@@ -12,10 +12,10 @@ public record ApiKeyEntity : EntityBase, IApiKey
     public required string Name { get; init; }
 
     [BsonIgnoreIfDefault]
-    public string? ApiKey { get; init; }
+    public string ApiKey { get; init; }
 
     [BsonIgnoreIfDefault]
-    public string? TeamKey { get; init; }
+    public string TeamKey { get; init; }
 
     [BsonIgnoreIfDefault]
     public Dictionary<string, string> Tags { get; init; } = new();

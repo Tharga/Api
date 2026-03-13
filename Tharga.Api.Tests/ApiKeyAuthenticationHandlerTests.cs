@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Tharga.Api;
 
 namespace Tharga.Api.Tests;
 
@@ -33,7 +32,7 @@ public class ApiKeyAuthenticationHandlerTests
         return handler;
     }
 
-    private static HttpContext CreateHttpContext(string? apiKeyHeaderValue = null)
+    private static HttpContext CreateHttpContext(string apiKeyHeaderValue = null)
     {
         var context = new DefaultHttpContext();
         if (apiKeyHeaderValue != null)
@@ -82,7 +81,7 @@ public class ApiKeyAuthenticationHandlerTests
     [Fact]
     public async Task With_Invalid_ApiKey_Returns_Fail()
     {
-        _apiKeyService.GetByApiKeyAsync("invalid-key").Returns(Task.FromResult<IApiKey>(null!));
+        _apiKeyService.GetByApiKeyAsync("invalid-key").Returns(Task.FromResult<IApiKey>(null));
 
         var context = CreateHttpContext("invalid-key");
         var handler = await CreateHandler(context);
@@ -91,7 +90,7 @@ public class ApiKeyAuthenticationHandlerTests
 
         Assert.False(result.Succeeded);
         Assert.False(result.None);
-        Assert.Contains("Invalid", result.Failure!.Message);
+        Assert.Contains("Invalid", result.Failure.Message);
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public class ApiKeyAuthenticationHandlerTests
         var result = await handler.AuthenticateAsync();
 
         Assert.True(result.Succeeded);
-        var teamKeyClaim = result.Principal!.FindFirst(ApiKeyConstants.TeamKeyClaim);
+        var teamKeyClaim = result.Principal.FindFirst(ApiKeyConstants.TeamKeyClaim);
         Assert.NotNull(teamKeyClaim);
         Assert.Equal("team-123", teamKeyClaim.Value);
 
@@ -122,7 +121,7 @@ public class ApiKeyAuthenticationHandlerTests
     {
         var apiKey = Substitute.For<IApiKey>();
         apiKey.TeamKey.Returns("team-456");
-        apiKey.Name.Returns((string?)null);
+        apiKey.Name.Returns((string)null);
         _apiKeyService.GetByApiKeyAsync("valid-key").Returns(Task.FromResult(apiKey));
 
         var context = CreateHttpContext("valid-key");
@@ -131,7 +130,7 @@ public class ApiKeyAuthenticationHandlerTests
         var result = await handler.AuthenticateAsync();
 
         Assert.True(result.Succeeded);
-        var nameClaim = result.Principal!.FindFirst(ClaimTypes.Name);
+        var nameClaim = result.Principal.FindFirst(ClaimTypes.Name);
         Assert.NotNull(nameClaim);
         Assert.Equal("team-456", nameClaim.Value);
     }

@@ -13,7 +13,7 @@ public static class ControllersRegistration
     /// <summary>
     /// Registers MVC controllers, OpenAPI document with API key security scheme, Swagger, and endpoints API explorer.
     /// </summary>
-    public static IServiceCollection AddThargaControllers(this IServiceCollection services, Action<ThargaControllerOptions>? configure = null)
+    public static IServiceCollection AddThargaControllers(this IServiceCollection services, Action<ThargaControllerOptions> configure = null)
     {
         var options = new ThargaControllerOptions();
         configure?.Invoke(options);

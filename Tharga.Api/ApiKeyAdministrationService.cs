@@ -22,7 +22,7 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     {
         var items = await _repository.GetAsync().ToArrayAsync();
         var item = items.SingleOrDefault(x => _apiKeyService.Verify(apiKey, x.ApiKeyHash));
-        return item!;
+        return item;
     }
 
     public async IAsyncEnumerable<IApiKey> GetKeysAsync(string teamKey)

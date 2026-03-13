@@ -1,4 +1,3 @@
-using Tharga.Api;
 using Tharga.Toolkit.Password;
 
 namespace Tharga.Api.Tests;
