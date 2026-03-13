@@ -8,17 +8,24 @@ namespace Tharga.Api;
 /// </summary>
 public record ApiKeyEntity : EntityBase, IApiKey
 {
+    /// <inheritdoc />
     public required string Key { get; init; }
+
+    /// <inheritdoc />
     public required string Name { get; init; }
 
+    /// <inheritdoc />
     [BsonIgnoreIfDefault]
     public string ApiKey { get; init; }
 
+    /// <inheritdoc />
     [BsonIgnoreIfDefault]
     public string TeamKey { get; init; }
 
+    /// <inheritdoc />
     [BsonIgnoreIfDefault]
     public Dictionary<string, string> Tags { get; init; } = new();
 
+    /// <summary>Hashed value of the API key used for verification.</summary>
     public required string ApiKeyHash { get; init; }
 }

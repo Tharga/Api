@@ -7,9 +7,18 @@ namespace Tharga.Api;
 /// </summary>
 public interface IApiKeyRepository : IRepository
 {
+    /// <summary>Returns all stored API key entities.</summary>
     IAsyncEnumerable<ApiKeyEntity> GetAsync();
+
+    /// <summary>Returns the API key entity with the specified key, or <c>null</c> if not found.</summary>
     Task<ApiKeyEntity> GetAsync(string key);
+
+    /// <summary>Persists a new API key entity and returns it.</summary>
     Task<ApiKeyEntity> AddAsync(ApiKeyEntity apiKeyEntity);
+
+    /// <summary>Replaces the API key entity identified by the given key.</summary>
     Task UpdateAsync(string key, ApiKeyEntity apiKeyEntity);
+
+    /// <summary>Marks the API key as locked so it cannot be used.</summary>
     Task LockKeyAsync(string key);
 }

@@ -12,12 +12,16 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     private readonly IApiKeyRepository _repository;
     private readonly IApiKeyService _apiKeyService;
 
+    /// <summary>
+    /// Creates a new instance using the specified repository and key hashing service.
+    /// </summary>
     public ApiKeyAdministrationService(IApiKeyRepository repository, IApiKeyService apiKeyService)
     {
         _repository = repository;
         _apiKeyService = apiKeyService;
     }
 
+    /// <inheritdoc />
     public async Task<IApiKey> GetByApiKeyAsync(string apiKey)
     {
         var items = await _repository.GetAsync().ToArrayAsync();
@@ -25,6 +29,7 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
         return item;
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<IApiKey> GetKeysAsync(string teamKey)
     {
         var count = 0;
@@ -41,12 +46,14 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
         }
     }
 
+    /// <inheritdoc />
     public async Task RefreshKeyAsync(string teamKey, string key)
     {
         var item = await _repository.GetAsync(key);
         await _repository.UpdateAsync(key, BuildKey(teamKey, item.Name, item.Tags));
     }
 
+    /// <inheritdoc />
     public Task LockKeyAsync(string key)
     {
         return _repository.LockKeyAsync(key);

@@ -13,6 +13,9 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 {
     private readonly IApiKeyAdministrationService _apiKeyAdministrationService;
 
+    /// <summary>
+    /// Creates a new instance of the API key authentication handler.
+    /// </summary>
     public ApiKeyAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
