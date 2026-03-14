@@ -10,4 +10,7 @@ public static class TeamClaimTypes
 
     /// <summary>Claim type for the access level.</summary>
     public const string AccessLevel = "AccessLevel";
+
+    /// <summary>Claim type for scopes. Multiple scope claims may be present.</summary>
+    public const string Scope = "Scope";
 }

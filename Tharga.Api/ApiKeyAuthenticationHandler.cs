@@ -12,6 +12,7 @@ namespace Tharga.Api;
 public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     private readonly IApiKeyAdministrationService _apiKeyAdministrationService;
+    private readonly IScopeRegistry _scopeRegistry;
 
     /// <summary>
     /// Creates a new instance of the API key authentication handler.
@@ -20,10 +21,12 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        IApiKeyAdministrationService apiKeyAdministrationService)
+        IApiKeyAdministrationService apiKeyAdministrationService,
+        IScopeRegistry scopeRegistry = null)
         : base(options, logger, encoder)
     {
         _apiKeyAdministrationService = apiKeyAdministrationService;
+        _scopeRegistry = scopeRegistry;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -39,16 +42,25 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         if (key == null)
             return AuthenticateResult.Fail("Invalid API key.");
 
-        var accessLevel = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
+        var accessLevelStr = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
             ? level
             : AccessLevel.Administrator.ToString();
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(TeamClaimTypes.TeamKey, key.TeamKey),
-            new Claim(ClaimTypes.Name, key.Name ?? key.TeamKey),
-            new Claim(TeamClaimTypes.AccessLevel, accessLevel),
+            new(TeamClaimTypes.TeamKey, key.TeamKey),
+            new(ClaimTypes.Name, key.Name ?? key.TeamKey),
+            new(TeamClaimTypes.AccessLevel, accessLevelStr),
         };
+
+        if (_scopeRegistry != null && Enum.TryParse<AccessLevel>(accessLevelStr, out var accessLevel))
+        {
+            foreach (var scope in _scopeRegistry.GetScopesForAccessLevel(accessLevel))
+            {
+                claims.Add(new Claim(TeamClaimTypes.Scope, scope));
+            }
+        }
+
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
