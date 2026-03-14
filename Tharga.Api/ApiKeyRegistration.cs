@@ -11,17 +11,22 @@ public static class ApiKeyRegistration
     /// <summary>
     /// Adds API key authentication with the default <see cref="ApiKeyAdministrationService"/>.
     /// </summary>
-    public static AuthenticationBuilder AddThargaApiKeyAuthentication(this AuthenticationBuilder builder)
+    public static AuthenticationBuilder AddThargaApiKeyAuthentication(this AuthenticationBuilder builder, Action<ApiKeyOptions> configureOptions = null)
     {
-        return builder.AddThargaApiKeyAuthentication<ApiKeyAdministrationService>();
+        return builder.AddThargaApiKeyAuthentication<ApiKeyAdministrationService>(configureOptions);
     }
 
     /// <summary>
     /// Adds API key authentication with a custom <see cref="IApiKeyAdministrationService"/> implementation.
     /// </summary>
-    public static AuthenticationBuilder AddThargaApiKeyAuthentication<TService>(this AuthenticationBuilder builder)
+    public static AuthenticationBuilder AddThargaApiKeyAuthentication<TService>(this AuthenticationBuilder builder, Action<ApiKeyOptions> configureOptions = null)
         where TService : class, IApiKeyAdministrationService
     {
+        if (configureOptions != null)
+            builder.Services.Configure(configureOptions);
+        else
+            builder.Services.Configure<ApiKeyOptions>(_ => { });
+
         builder.AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
             ApiKeyConstants.SchemeName, "API Key", null);
 

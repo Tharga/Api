@@ -28,4 +28,20 @@ public record ApiKeyEntity : EntityBase, IApiKey
 
     /// <summary>Hashed value of the API key used for verification.</summary>
     public required string ApiKeyHash { get; init; }
+
+    /// <summary>Access level for this API key. Null defaults to Administrator.</summary>
+    [BsonIgnoreIfNull]
+    public AccessLevel? AccessLevel { get; init; }
+
+    /// <summary>Tenant roles assigned to this API key.</summary>
+    [BsonIgnoreIfNull]
+    public string[] Roles { get; init; }
+
+    /// <summary>Expiry date. Null means no expiry.</summary>
+    [BsonIgnoreIfNull]
+    public DateTime? ExpiryDate { get; init; }
+
+    /// <summary>When this key was created.</summary>
+    [BsonIgnoreIfNull]
+    public DateTime? CreatedAt { get; init; }
 }

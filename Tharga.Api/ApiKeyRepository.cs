@@ -46,4 +46,9 @@ internal class ApiKeyRepository : IApiKeyRepository
         };
         await _collection.ReplaceOneAsync(apiKeyEntity);
     }
+
+    public Task DeleteAsync(string key)
+    {
+        return _collection.DeleteOneAsync(x => x.Key == key);
+    }
 }

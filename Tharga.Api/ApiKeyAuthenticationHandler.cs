@@ -42,23 +42,17 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         if (key == null)
             return AuthenticateResult.Fail("Invalid API key.");
 
-        var accessLevelStr = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
-            ? level
-            : AccessLevel.Administrator.ToString();
+        var (accessLevel, roleNames) = ResolveAccessLevelAndRoles(key);
 
         var claims = new List<Claim>
         {
             new(TeamClaimTypes.TeamKey, key.TeamKey),
             new(ClaimTypes.Name, key.Name ?? key.TeamKey),
-            new(TeamClaimTypes.AccessLevel, accessLevelStr),
+            new(TeamClaimTypes.AccessLevel, accessLevel.ToString()),
         };
 
-        if (_scopeRegistry != null && Enum.TryParse<AccessLevel>(accessLevelStr, out var accessLevel))
+        if (_scopeRegistry != null)
         {
-            var roleNames = key.Tags.TryGetValue("TenantRoles", out var roles)
-                ? roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                : Array.Empty<string>();
-
             foreach (var scope in _scopeRegistry.GetEffectiveScopes(accessLevel, roleNames))
             {
                 claims.Add(new Claim(TeamClaimTypes.Scope, scope));
@@ -70,5 +64,29 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
         return AuthenticateResult.Success(ticket);
+    }
+
+    private static (AccessLevel accessLevel, string[] roleNames) ResolveAccessLevelAndRoles(IApiKey key)
+    {
+        if (key is ApiKeyEntity entity)
+        {
+            var al = entity.AccessLevel ?? AccessLevel.Administrator;
+            var roles = entity.Roles ?? Array.Empty<string>();
+            return (al, roles);
+        }
+
+        var accessLevelStr = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
+            ? level
+            : AccessLevel.Administrator.ToString();
+
+        var accessLevel = Enum.TryParse<AccessLevel>(accessLevelStr, out var parsed)
+            ? parsed
+            : AccessLevel.Administrator;
+
+        var roleStr = key.Tags.TryGetValue("TenantRoles", out var r)
+            ? r.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : Array.Empty<string>();
+
+        return (accessLevel, roleStr);
     }
 }

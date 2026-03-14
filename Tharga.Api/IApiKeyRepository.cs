@@ -21,4 +21,7 @@ public interface IApiKeyRepository : IRepository
 
     /// <summary>Marks the API key as locked so it cannot be used.</summary>
     Task LockKeyAsync(string key);
+
+    /// <summary>Deletes the API key entity with the specified key.</summary>
+    Task DeleteAsync(string key);
 }

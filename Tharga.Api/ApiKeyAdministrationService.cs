@@ -1,4 +1,5 @@
 using MongoDB.Bson;
+using Microsoft.Extensions.Options;
 using Tharga.Toolkit;
 using Tharga.Toolkit.Password;
 
@@ -11,14 +12,16 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
 {
     private readonly IApiKeyRepository _repository;
     private readonly IApiKeyService _apiKeyService;
+    private readonly ApiKeyOptions _options;
 
     /// <summary>
     /// Creates a new instance using the specified repository and key hashing service.
     /// </summary>
-    public ApiKeyAdministrationService(IApiKeyRepository repository, IApiKeyService apiKeyService)
+    public ApiKeyAdministrationService(IApiKeyRepository repository, IApiKeyService apiKeyService, IOptions<ApiKeyOptions> options = null)
     {
         _repository = repository;
         _apiKeyService = apiKeyService;
+        _options = options?.Value ?? new ApiKeyOptions();
     }
 
     /// <inheritdoc />
@@ -26,6 +29,10 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     {
         var items = await _repository.GetAsync().ToArrayAsync();
         var item = items.SingleOrDefault(x => _apiKeyService.Verify(apiKey, x.ApiKeyHash));
+
+        if (item?.ExpiryDate != null && item.ExpiryDate < DateTime.UtcNow)
+            return null;
+
         return item;
     }
 
@@ -39,18 +46,57 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
             yield return item;
         }
 
-        for (var i = count; i < 2; i++)
+        if (_options.AdvancedMode) yield break;
+
+        for (var i = count; i < _options.AutoKeyCount; i++)
         {
             var name = IntegerExtensions.GetNameForNumber(i + 1);
-            yield return await _repository.AddAsync(BuildKey(teamKey, name, []));
+            var expiryDate = GetDefaultExpiryDate();
+            var entity = BuildKey(teamKey, name, [], AccessLevel.Administrator, null, expiryDate);
+            var created = await _repository.AddAsync(entity);
+
+            if (_options.AutoLockKeys)
+            {
+                await _repository.LockKeyAsync(created.Key);
+                created = created with { ApiKey = null };
+            }
+
+            yield return created;
         }
     }
 
     /// <inheritdoc />
-    public async Task RefreshKeyAsync(string teamKey, string key)
+    public async Task<IApiKey> CreateKeyAsync(string teamKey, string name, AccessLevel accessLevel, string[] roles = null, DateTime? expiryDate = null)
+    {
+        expiryDate ??= GetDefaultExpiryDate();
+
+        if (_options.MaxExpiryDays.HasValue && expiryDate.HasValue)
+        {
+            var maxDate = DateTime.UtcNow.AddDays(_options.MaxExpiryDays.Value);
+            if (expiryDate > maxDate)
+                throw new InvalidOperationException($"Expiry date cannot exceed {_options.MaxExpiryDays} days from now.");
+        }
+
+        var entity = BuildKey(teamKey, name, new Dictionary<string, string>(), accessLevel, roles, expiryDate);
+        var created = await _repository.AddAsync(entity);
+
+        if (_options.AutoLockKeys)
+            await _repository.LockKeyAsync(created.Key);
+
+        return created;
+    }
+
+    /// <inheritdoc />
+    public async Task<IApiKey> RefreshKeyAsync(string teamKey, string key)
     {
         var item = await _repository.GetAsync(key);
-        await _repository.UpdateAsync(key, BuildKey(teamKey, item.Name, item.Tags));
+        var refreshed = BuildKey(teamKey, item.Name, item.Tags, item.AccessLevel ?? AccessLevel.Administrator, item.Roles, item.ExpiryDate);
+        await _repository.UpdateAsync(key, refreshed);
+
+        if (_options.AutoLockKeys)
+            await _repository.LockKeyAsync(key);
+
+        return refreshed;
     }
 
     /// <inheritdoc />
@@ -59,7 +105,20 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
         return _repository.LockKeyAsync(key);
     }
 
-    private ApiKeyEntity BuildKey(string teamKey, string name, Dictionary<string, string> tags)
+    /// <inheritdoc />
+    public Task DeleteKeyAsync(string key)
+    {
+        return _repository.DeleteAsync(key);
+    }
+
+    private DateTime? GetDefaultExpiryDate()
+    {
+        return _options.MaxExpiryDays.HasValue
+            ? DateTime.UtcNow.AddDays(_options.MaxExpiryDays.Value)
+            : null;
+    }
+
+    private ApiKeyEntity BuildKey(string teamKey, string name, Dictionary<string, string> tags, AccessLevel accessLevel, string[] roles, DateTime? expiryDate)
     {
         var apiKey = _apiKeyService.BuildApiKey(teamKey, () => StringExtension.GetRandomString(24, 32));
         var encryptedApiKey = _apiKeyService.Encrypt(apiKey);
@@ -72,6 +131,10 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
             TeamKey = teamKey,
             Tags = tags,
             ApiKeyHash = encryptedApiKey,
+            AccessLevel = accessLevel,
+            Roles = roles,
+            ExpiryDate = expiryDate,
+            CreatedAt = DateTime.UtcNow,
         };
     }
 }
