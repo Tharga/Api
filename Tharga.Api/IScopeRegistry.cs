@@ -7,4 +7,5 @@ public interface IScopeRegistry
 {
     IReadOnlyList<ScopeDefinition> All { get; }
     IReadOnlyList<string> GetScopesForAccessLevel(AccessLevel accessLevel);
+    IReadOnlyList<string> GetEffectiveScopes(AccessLevel accessLevel, IEnumerable<string> roleNames);
 }

@@ -55,7 +55,11 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 
         if (_scopeRegistry != null && Enum.TryParse<AccessLevel>(accessLevelStr, out var accessLevel))
         {
-            foreach (var scope in _scopeRegistry.GetScopesForAccessLevel(accessLevel))
+            var roleNames = key.Tags.TryGetValue("TenantRoles", out var roles)
+                ? roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                : Array.Empty<string>();
+
+            foreach (var scope in _scopeRegistry.GetEffectiveScopes(accessLevel, roleNames))
             {
                 claims.Add(new Claim(TeamClaimTypes.Scope, scope));
             }

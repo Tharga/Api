@@ -5,10 +5,17 @@ namespace Tharga.Api;
 /// Owner and Administrator get all registered scopes.
 /// User gets scopes registered at User or Viewer level.
 /// Viewer gets only scopes registered at Viewer level.
+/// Role scopes are unioned with access level scopes.
 /// </summary>
 public class ScopeRegistry : IScopeRegistry
 {
     private readonly List<ScopeDefinition> _scopes = new();
+    private ITenantRoleRegistry _roleRegistry;
+
+    public void SetRoleRegistry(ITenantRoleRegistry roleRegistry)
+    {
+        _roleRegistry = roleRegistry;
+    }
 
     public IReadOnlyList<ScopeDefinition> All => _scopes;
 
@@ -28,6 +35,21 @@ public class ScopeRegistry : IScopeRegistry
         return _scopes
             .Where(s => s.DefaultMinimumLevel >= accessLevel)
             .Select(s => s.Name)
+            .ToList();
+    }
+
+    public IReadOnlyList<string> GetEffectiveScopes(AccessLevel accessLevel, IEnumerable<string> roleNames)
+    {
+        var accessLevelScopes = GetScopesForAccessLevel(accessLevel);
+
+        if (_roleRegistry == null || roleNames == null)
+            return accessLevelScopes;
+
+        var roleScopes = _roleRegistry.GetScopesForRoles(roleNames);
+
+        return accessLevelScopes
+            .Union(roleScopes)
+            .Distinct()
             .ToList();
     }
 }
