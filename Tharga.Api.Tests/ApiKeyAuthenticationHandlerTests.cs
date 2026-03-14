@@ -42,6 +42,15 @@ public class ApiKeyAuthenticationHandlerTests
         return context;
     }
 
+    private static IApiKey CreateApiKey(string teamKey, string name = "Test Key", Dictionary<string, string> tags = null)
+    {
+        var apiKey = Substitute.For<IApiKey>();
+        apiKey.TeamKey.Returns(teamKey);
+        apiKey.Name.Returns(name);
+        apiKey.Tags.Returns(tags ?? new Dictionary<string, string>());
+        return apiKey;
+    }
+
     [Fact]
     public async Task Without_Header_Returns_NoResult()
     {
@@ -96,9 +105,7 @@ public class ApiKeyAuthenticationHandlerTests
     [Fact]
     public async Task With_Valid_ApiKey_Returns_Success_With_Claims()
     {
-        var apiKey = Substitute.For<IApiKey>();
-        apiKey.TeamKey.Returns("team-123");
-        apiKey.Name.Returns("Test Key");
+        var apiKey = CreateApiKey("team-123");
         _apiKeyService.GetByApiKeyAsync("valid-key").Returns(Task.FromResult(apiKey));
 
         var context = CreateHttpContext("valid-key");
@@ -107,7 +114,8 @@ public class ApiKeyAuthenticationHandlerTests
         var result = await handler.AuthenticateAsync();
 
         Assert.True(result.Succeeded);
-        var teamKeyClaim = result.Principal.FindFirst(ApiKeyConstants.TeamKeyClaim);
+
+        var teamKeyClaim = result.Principal.FindFirst(TeamClaimTypes.TeamKey);
         Assert.NotNull(teamKeyClaim);
         Assert.Equal("team-123", teamKeyClaim.Value);
 
@@ -119,9 +127,7 @@ public class ApiKeyAuthenticationHandlerTests
     [Fact]
     public async Task With_Valid_ApiKey_And_Null_Name_Uses_TeamKey_As_Name()
     {
-        var apiKey = Substitute.For<IApiKey>();
-        apiKey.TeamKey.Returns("team-456");
-        apiKey.Name.Returns((string)null);
+        var apiKey = CreateApiKey("team-456", name: null);
         _apiKeyService.GetByApiKeyAsync("valid-key").Returns(Task.FromResult(apiKey));
 
         var context = CreateHttpContext("valid-key");
@@ -133,5 +139,40 @@ public class ApiKeyAuthenticationHandlerTests
         var nameClaim = result.Principal.FindFirst(ClaimTypes.Name);
         Assert.NotNull(nameClaim);
         Assert.Equal("team-456", nameClaim.Value);
+    }
+
+    [Fact]
+    public async Task With_Valid_ApiKey_Defaults_AccessLevel_To_Administrator()
+    {
+        var apiKey = CreateApiKey("team-123");
+        _apiKeyService.GetByApiKeyAsync("valid-key").Returns(Task.FromResult(apiKey));
+
+        var context = CreateHttpContext("valid-key");
+        var handler = await CreateHandler(context);
+
+        var result = await handler.AuthenticateAsync();
+
+        Assert.True(result.Succeeded);
+        var accessLevelClaim = result.Principal.FindFirst(TeamClaimTypes.AccessLevel);
+        Assert.NotNull(accessLevelClaim);
+        Assert.Equal("Administrator", accessLevelClaim.Value);
+    }
+
+    [Fact]
+    public async Task With_Valid_ApiKey_And_AccessLevel_Tag_Uses_Tag_Value()
+    {
+        var tags = new Dictionary<string, string> { [TeamClaimTypes.AccessLevel] = "Viewer" };
+        var apiKey = CreateApiKey("team-123", tags: tags);
+        _apiKeyService.GetByApiKeyAsync("viewer-key").Returns(Task.FromResult(apiKey));
+
+        var context = CreateHttpContext("viewer-key");
+        var handler = await CreateHandler(context);
+
+        var result = await handler.AuthenticateAsync();
+
+        Assert.True(result.Succeeded);
+        var accessLevelClaim = result.Principal.FindFirst(TeamClaimTypes.AccessLevel);
+        Assert.NotNull(accessLevelClaim);
+        Assert.Equal("Viewer", accessLevelClaim.Value);
     }
 }

@@ -15,7 +15,12 @@ public static class ApiKeyConstants
     public const string PolicyName = "ApiKeyPolicy";
 
     /// <summary>Claim type for the team key.</summary>
-    public const string TeamKeyClaim = "TeamKey";
+    [Obsolete($"Use {nameof(TeamClaimTypes)}.{nameof(TeamClaimTypes.TeamKey)} instead.")]
+    public const string TeamKeyClaim = TeamClaimTypes.TeamKey;
+
+    /// <summary>Claim type for the access level.</summary>
+    [Obsolete($"Use {nameof(TeamClaimTypes)}.{nameof(TeamClaimTypes.AccessLevel)} instead.")]
+    public const string AccessLevelClaim = TeamClaimTypes.AccessLevel;
 
     /// <summary>OpenAPI security scheme identifier.</summary>
     public const string OpenApiSchemeId = "ApiKey";

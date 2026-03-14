@@ -4,11 +4,12 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub repo Issues](https://img.shields.io/github/issues/Tharga/Api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/Tharga/Api/issues?q=is%3Aopen)
 
-Reusable API-key authentication handler, controller registration, and OpenAPI/Swagger setup for ASP.NET Core projects. Targets .NET 9.0 and .NET 10.0.
+Reusable API-key authentication, authorization, controller registration, and OpenAPI/Swagger setup for ASP.NET Core projects. Targets .NET 9.0 and .NET 10.0.
 
 ## Features
 
-- **API key authentication** – `AuthenticationHandler` that reads the `X-API-KEY` header, validates it against a MongoDB-backed store, and populates claims (`TeamKey`, `Name`).
+- **API key authentication** – `AuthenticationHandler` that reads the `X-API-KEY` header, validates it against a store, and populates `TeamKey`, `Name`, and `AccessLevel` claims.
+- **Access level authorization** – `[RequireAccessLevel]` attribute with `AccessLevelProxy<T>` for declarative, service-level authorization enforcement via `DispatchProxy`.
 - **Controller registration** – `AddThargaControllers` registers MVC controllers, OpenAPI document generation (with API key security scheme), Swagger UI, and endpoints API explorer in a single call.
 - **API key management** – `IApiKeyAdministrationService` provides key lookup, listing, refresh, and lock operations. A default MongoDB-backed implementation is included.
 - **Pluggable storage** – Implement `IApiKeyAdministrationService` to use your own data store, or use the built-in `ApiKeyAdministrationService` with Tharga.MongoDB.
@@ -58,13 +59,47 @@ public class MyController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
-        var teamKey = User.FindFirst(ApiKeyConstants.TeamKeyClaim)?.Value;
+        var teamKey = User.FindFirst(TeamClaimTypes.TeamKey)?.Value;
         return Ok(new { teamKey });
     }
 }
 ```
 
-### 5. Custom key service (optional)
+### 5. Access level enforcement on services
+
+Decorate service interface methods with `[RequireAccessLevel]` and register with `AddScopedWithAccessLevel`:
+
+```csharp
+public interface IMyService
+{
+    [RequireAccessLevel(AccessLevel.Viewer)]
+    IAsyncEnumerable<Item> GetAsync();
+
+    [RequireAccessLevel(AccessLevel.User)]
+    Task<Item> AddAsync(string name);
+
+    [RequireAccessLevel(AccessLevel.Administrator)]
+    Task DeleteAsync(string key);
+}
+
+// Program.cs
+builder.Services.AddScopedWithAccessLevel<IMyService, MyService>();
+```
+
+The proxy reads `TeamKey` and `AccessLevel` claims from `HttpContext.User`. Methods without the attribute throw `InvalidOperationException` (fail-closed).
+
+### 6. API key access level
+
+The `AccessLevel` for API keys is read from `IApiKey.Tags["AccessLevel"]`. If not set, it defaults to `Administrator`. The access level hierarchy is:
+
+| Level | Can access |
+|-------|-----------|
+| `Owner` | Everything |
+| `Administrator` | Everything (same as Owner) |
+| `User` | User, Viewer |
+| `Viewer` | Viewer only |
+
+### 7. Custom key service (optional)
 
 To use your own storage backend, implement `IApiKeyAdministrationService` and register it:
 
@@ -77,9 +112,14 @@ builder.Services.AddAuthentication()
 
 | Type | Description |
 |------|-------------|
+| `AccessLevel` | Enum: Owner, Administrator, User, Viewer. |
+| `TeamClaimTypes` | Claim type constants: `TeamKey`, `AccessLevel`. |
+| `RequireAccessLevelAttribute` | Declares minimum access level for a service method. |
+| `AccessLevelProxy<T>` | DispatchProxy enforcing `[RequireAccessLevel]` via claims. |
+| `AccessLevelServiceCollectionExtensions` | `AddScopedWithAccessLevel<TService, TImpl>()` registration helper. |
 | `IApiKey` | Interface representing an API key with metadata (Key, Name, ApiKey, TeamKey, Tags). |
 | `IApiKeyAdministrationService` | Service interface for key lookup, listing, refresh, and lock. |
-| `ApiKeyConstants` | Well-known constants: `HeaderName`, `SchemeName`, `PolicyName`, `TeamKeyClaim`. |
+| `ApiKeyConstants` | Well-known constants: `HeaderName`, `SchemeName`, `PolicyName`. |
 | `ApiKeyRegistration` | Extension methods: `AddThargaApiKeyAuthentication`, `AddThargaApiKeyAuthentication<T>`. |
 | `ControllersRegistration` | Extension methods: `AddThargaControllers`, `AddThargaApiKeys`, `UseThargaControllers`. |
 | `ThargaControllerOptions` | Options for Swagger title and route prefix. |
