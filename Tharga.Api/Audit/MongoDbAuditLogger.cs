@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace Tharga.Api.Audit;
 
@@ -37,23 +38,25 @@ public class MongoDbAuditLogger : BackgroundService, IAuditLogger
         _channel.Writer.TryWrite(entry);
     }
 
-    public async Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query)
+    public async Task<AuditQueryResult> QueryAsync(AuditQuery query)
     {
         var collection = _serviceProvider.GetService<IAuditRepositoryCollection>();
-        if (collection == null) return Array.Empty<AuditEntry>();
+        if (collection == null) return new AuditQueryResult();
 
-        var entities = new List<AuditEntryEntity>();
-        await foreach (var entity in collection.GetAsync(BuildFilter(query)))
+        var options = new Tharga.MongoDB.Options<AuditEntryEntity>
         {
-            entities.Add(entity);
-        }
+            Sort = BuildSort(query),
+            Skip = query.Skip,
+            Limit = query.Take
+        };
 
-        return entities
-            .OrderByDescending(e => e.Timestamp)
-            .Skip(query.Skip)
-            .Take(query.Take)
-            .Select(ToAuditEntry)
-            .ToList();
+        var result = await collection.GetManyAsync(BuildFilter(query), options);
+
+        return new AuditQueryResult
+        {
+            Items = result.Items.Select(ToAuditEntry).ToList(),
+            TotalCount = result.TotalCount
+        };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -106,18 +109,73 @@ public class MongoDbAuditLogger : BackgroundService, IAuditLogger
         }
     }
 
-    private static System.Linq.Expressions.Expression<Func<AuditEntryEntity, bool>> BuildFilter(AuditQuery query)
+    private static FilterDefinition<AuditEntryEntity> BuildFilter(AuditQuery query)
     {
-        return e =>
-            (query.TeamKey == null || e.TeamKey == query.TeamKey) &&
-            (query.CallerIdentity == null || e.CallerIdentity == query.CallerIdentity) &&
-            (query.CallerType == null || e.CallerType == query.CallerType) &&
-            (query.Feature == null || e.Feature == query.Feature) &&
-            (query.Action == null || e.Action == query.Action) &&
-            (query.CallerSource == null || e.CallerSource == query.CallerSource) &&
-            (query.Success == null || e.Success == query.Success) &&
-            (query.From == null || e.Timestamp >= query.From) &&
-            (query.To == null || e.Timestamp <= query.To);
+        var builder = Builders<AuditEntryEntity>.Filter;
+        var filters = new List<FilterDefinition<AuditEntryEntity>>();
+
+        // Multi-value filters take precedence over single-value
+        if (query.TeamKeys is { Length: > 0 })
+            filters.Add(builder.In(e => e.TeamKey, query.TeamKeys));
+        else if (query.TeamKey != null)
+            filters.Add(builder.Eq(e => e.TeamKey, query.TeamKey));
+
+        if (query.Features is { Length: > 0 })
+            filters.Add(builder.In(e => e.Feature, query.Features));
+        else if (query.Feature != null)
+            filters.Add(builder.Eq(e => e.Feature, query.Feature));
+
+        if (query.Actions is { Length: > 0 })
+            filters.Add(builder.In(e => e.Action, query.Actions));
+        else if (query.Action != null)
+            filters.Add(builder.Eq(e => e.Action, query.Action));
+
+        if (query.Scopes is { Length: > 0 })
+            filters.Add(builder.In(e => e.ScopeChecked, query.Scopes));
+
+        if (query.EventTypes is { Length: > 0 })
+            filters.Add(builder.In(e => e.EventType, query.EventTypes));
+        else if (query.EventType != null)
+            filters.Add(builder.Eq(e => e.EventType, query.EventType.Value));
+
+        if (query.CallerIdentity != null)
+            filters.Add(builder.Regex(e => e.CallerIdentity, new BsonRegularExpression(query.CallerIdentity, "i")));
+
+        if (query.MethodName != null)
+            filters.Add(builder.Regex(e => e.MethodName, new BsonRegularExpression(query.MethodName, "i")));
+
+        if (query.CallerType != null)
+            filters.Add(builder.Eq(e => e.CallerType, query.CallerType.Value));
+
+        if (query.CallerSource != null)
+            filters.Add(builder.Eq(e => e.CallerSource, query.CallerSource.Value));
+
+        if (query.Success != null)
+            filters.Add(builder.Eq(e => e.Success, query.Success.Value));
+
+        if (query.From != null)
+            filters.Add(builder.Gte(e => e.Timestamp, query.From.Value));
+
+        if (query.To != null)
+            filters.Add(builder.Lte(e => e.Timestamp, query.To.Value));
+
+        return filters.Count > 0 ? builder.And(filters) : builder.Empty;
+    }
+
+    private static SortDefinition<AuditEntryEntity> BuildSort(AuditQuery query)
+    {
+        var field = query.SortField switch
+        {
+            nameof(AuditEntry.Timestamp) => nameof(AuditEntryEntity.Timestamp),
+            nameof(AuditEntry.CallerIdentity) => nameof(AuditEntryEntity.CallerIdentity),
+            nameof(AuditEntry.MethodName) => nameof(AuditEntryEntity.MethodName),
+            nameof(AuditEntry.DurationMs) => nameof(AuditEntryEntity.DurationMs),
+            _ => nameof(AuditEntryEntity.Timestamp)
+        };
+
+        return query.SortDescending
+            ? Builders<AuditEntryEntity>.Sort.Descending(field)
+            : Builders<AuditEntryEntity>.Sort.Ascending(field);
     }
 
     private static AuditEntryEntity ToEntity(AuditEntry entry)

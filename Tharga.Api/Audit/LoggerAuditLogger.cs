@@ -29,8 +29,8 @@ public class LoggerAuditLogger : IAuditLogger
             entry.DurationMs, entry.Success, entry.CorrelationId);
     }
 
-    public Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query)
+    public Task<AuditQueryResult> QueryAsync(AuditQuery query)
     {
-        return Task.FromResult<IReadOnlyList<AuditEntry>>(Array.Empty<AuditEntry>());
+        return Task.FromResult(new AuditQueryResult());
     }
 }

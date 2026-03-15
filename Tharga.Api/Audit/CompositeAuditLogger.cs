@@ -28,10 +28,9 @@ public class CompositeAuditLogger : IAuditLogger
         }
     }
 
-    public Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query)
+    public Task<AuditQueryResult> QueryAsync(AuditQuery query)
     {
-        return _queryLogger?.QueryAsync(query)
-               ?? Task.FromResult<IReadOnlyList<AuditEntry>>(Array.Empty<AuditEntry>());
+        return _queryLogger?.QueryAsync(query) ?? Task.FromResult(new AuditQueryResult());
     }
 
     private bool ShouldLog(AuditEntry entry)

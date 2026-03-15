@@ -6,6 +6,6 @@ namespace Tharga.Api.Audit;
 public class NoOpAuditLogger : IAuditLogger
 {
     public void Log(AuditEntry entry) { }
-    public Task<IReadOnlyList<AuditEntry>> QueryAsync(AuditQuery query)
-        => Task.FromResult<IReadOnlyList<AuditEntry>>(Array.Empty<AuditEntry>());
+    public Task<AuditQueryResult> QueryAsync(AuditQuery query)
+        => Task.FromResult(new AuditQueryResult());
 }

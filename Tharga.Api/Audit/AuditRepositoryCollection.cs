@@ -22,13 +22,28 @@ internal class AuditRepositoryCollection : DiskRepositoryCollectionBase<AuditEnt
 
     public override IEnumerable<CreateIndexModel<AuditEntryEntity>> Indices =>
     [
+        // TTL index for automatic retention cleanup
         new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.Timestamp),
-            new CreateIndexOptions { Name = "Timestamp", ExpireAfter = TimeSpan.FromDays(_retentionDays) }),
-        new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.TeamKey),
-            new CreateIndexOptions { Name = "TeamKey" }),
+            new CreateIndexOptions { Name = "Timestamp_TTL", ExpireAfter = TimeSpan.FromDays(_retentionDays) }),
+
+        // Compound index for default sort (descending time) with team filter
+        new(Builders<AuditEntryEntity>.IndexKeys
+                .Descending(x => x.Timestamp)
+                .Ascending(x => x.TeamKey),
+            new CreateIndexOptions { Name = "Timestamp_desc_TeamKey" }),
+
+        // Individual indices for $in queries from multi-select filters
         new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.Feature),
             new CreateIndexOptions { Name = "Feature" }),
+        new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.Action),
+            new CreateIndexOptions { Name = "Action" }),
         new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.CallerIdentity),
-            new CreateIndexOptions { Name = "CallerIdentity" })
+            new CreateIndexOptions { Name = "CallerIdentity" }),
+        new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.CallerSource),
+            new CreateIndexOptions { Name = "CallerSource" }),
+        new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.EventType),
+            new CreateIndexOptions { Name = "EventType" }),
+        new(Builders<AuditEntryEntity>.IndexKeys.Ascending(x => x.ScopeChecked),
+            new CreateIndexOptions { Name = "ScopeChecked" }),
     ];
 }
