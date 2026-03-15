@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Tharga.Api.Audit;
 
 namespace Tharga.Api;
 
@@ -13,6 +14,7 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 {
     private readonly IApiKeyAdministrationService _apiKeyAdministrationService;
     private readonly IScopeRegistry _scopeRegistry;
+    private readonly IAuditLogger _auditLogger;
 
     /// <summary>
     /// Creates a new instance of the API key authentication handler.
@@ -22,11 +24,13 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         ILoggerFactory logger,
         UrlEncoder encoder,
         IApiKeyAdministrationService apiKeyAdministrationService,
-        IScopeRegistry scopeRegistry = null)
+        IScopeRegistry scopeRegistry = null,
+        CompositeAuditLogger auditLogger = null)
         : base(options, logger, encoder)
     {
         _apiKeyAdministrationService = apiKeyAdministrationService;
         _scopeRegistry = scopeRegistry;
+        _auditLogger = auditLogger;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -40,7 +44,10 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 
         var key = await _apiKeyAdministrationService.GetByApiKeyAsync(apiKey);
         if (key == null)
+        {
+            LogAuthEvent(null, null, false, "Invalid API key");
             return AuthenticateResult.Fail("Invalid API key.");
+        }
 
         var (accessLevel, roleNames, scopeOverrides) = ResolveKeyDetails(key);
 
@@ -63,7 +70,27 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
+        LogAuthEvent(key.Name ?? key.TeamKey, key.TeamKey, true);
+
         return AuthenticateResult.Success(ticket);
+    }
+
+    private void LogAuthEvent(string callerIdentity, string teamKey, bool success, string errorMessage = null)
+    {
+        _auditLogger?.Log(new AuditEntry
+        {
+            Timestamp = DateTime.UtcNow,
+            EventType = success ? AuditEventType.AuthSuccess : AuditEventType.AuthFailure,
+            Feature = "auth",
+            Action = "apikey",
+            MethodName = "HandleAuthenticateAsync",
+            Success = success,
+            ErrorMessage = errorMessage,
+            CallerType = AuditCallerType.ApiKey,
+            CallerIdentity = callerIdentity,
+            TeamKey = teamKey,
+            CallerSource = AuditCallerSource.Api,
+        });
     }
 
     private static (AccessLevel accessLevel, string[] roleNames, string[] scopeOverrides) ResolveKeyDetails(IApiKey key)

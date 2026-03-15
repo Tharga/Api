@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Tharga.Api.Audit;
 
 namespace Tharga.Api;
 
@@ -37,7 +38,8 @@ public static class ScopeServiceCollectionExtensions
         {
             var target = sp.GetRequiredService<TImplementation>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return ScopeProxy<TService>.Create(target, httpContextAccessor);
+            var auditLogger = sp.GetService<CompositeAuditLogger>();
+            return ScopeProxy<TService>.Create(target, httpContextAccessor, auditLogger);
         });
         return services;
     }
