@@ -47,8 +47,18 @@ internal class ApiKeyRepository : IApiKeyRepository
         await _collection.ReplaceOneAsync(apiKeyEntity);
     }
 
+    public IAsyncEnumerable<ApiKeyEntity> GetByPrefixAsync(string prefix)
+    {
+        return _collection.GetAsync(x => x.ApiKeyPrefix == prefix);
+    }
+
     public Task DeleteAsync(string key)
     {
         return _collection.DeleteOneAsync(x => x.Key == key);
+    }
+
+    public async Task PurgeExpiredAsync()
+    {
+        await _collection.DeleteManyAsync(x => x.ExpiryDate != null && x.ExpiryDate < DateTime.UtcNow);
     }
 }

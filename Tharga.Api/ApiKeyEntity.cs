@@ -29,6 +29,10 @@ public record ApiKeyEntity : EntityBase, IApiKey
     /// <summary>Hashed value of the API key used for verification.</summary>
     public required string ApiKeyHash { get; init; }
 
+    /// <summary>First 8 characters of the raw API key for indexed prefix lookup. Avoids full table scan.</summary>
+    [BsonIgnoreIfNull]
+    public string ApiKeyPrefix { get; init; }
+
     /// <summary>Access level for this API key. Null defaults to Administrator.</summary>
     [BsonIgnoreIfNull]
     public AccessLevel? AccessLevel { get; init; }

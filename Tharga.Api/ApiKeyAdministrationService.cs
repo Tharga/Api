@@ -27,8 +27,20 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     /// <inheritdoc />
     public async Task<IApiKey> GetByApiKeyAsync(string apiKey)
     {
-        var items = await _repository.GetAsync().ToArrayAsync();
-        var item = items.SingleOrDefault(x => _apiKeyService.Verify(apiKey, x.ApiKeyHash));
+        var prefix = GetPrefix(apiKey);
+        ApiKeyEntity item = null;
+
+        if (prefix != null)
+        {
+            var candidates = await _repository.GetByPrefixAsync(prefix).ToArrayAsync();
+            item = candidates.SingleOrDefault(x => _apiKeyService.Verify(apiKey, x.ApiKeyHash));
+        }
+
+        if (item == null)
+        {
+            var allItems = await _repository.GetAsync().ToArrayAsync();
+            item = allItems.SingleOrDefault(x => _apiKeyService.Verify(apiKey, x.ApiKeyHash));
+        }
 
         if (item?.ExpiryDate != null && item.ExpiryDate < DateTime.UtcNow)
             return null;
@@ -39,6 +51,8 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     /// <inheritdoc />
     public async IAsyncEnumerable<IApiKey> GetKeysAsync(string teamKey)
     {
+        await _repository.PurgeExpiredAsync();
+
         var count = 0;
         await foreach (var item in _repository.GetAsync())
         {
@@ -139,6 +153,7 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
             Key = Guid.NewGuid().ToString(),
             Name = name,
             ApiKey = apiKey,
+            ApiKeyPrefix = GetPrefix(apiKey),
             TeamKey = teamKey,
             Tags = tags,
             ApiKeyHash = encryptedApiKey,
@@ -147,5 +162,10 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
             ExpiryDate = expiryDate,
             CreatedAt = DateTime.UtcNow,
         };
+    }
+
+    private static string GetPrefix(string apiKey)
+    {
+        return apiKey?.Length >= 8 ? apiKey[..8] : null;
     }
 }

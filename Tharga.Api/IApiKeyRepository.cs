@@ -22,6 +22,12 @@ public interface IApiKeyRepository : IRepository
     /// <summary>Marks the API key as locked so it cannot be used.</summary>
     Task LockKeyAsync(string key);
 
+    /// <summary>Returns API key entities matching the given prefix.</summary>
+    IAsyncEnumerable<ApiKeyEntity> GetByPrefixAsync(string prefix);
+
     /// <summary>Deletes the API key entity with the specified key.</summary>
     Task DeleteAsync(string key);
+
+    /// <summary>Deletes all expired API key entities.</summary>
+    Task PurgeExpiredAsync();
 }

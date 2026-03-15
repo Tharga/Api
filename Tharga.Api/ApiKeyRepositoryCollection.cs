@@ -17,6 +17,7 @@ internal class ApiKeyRepositoryCollection : DiskRepositoryCollectionBase<ApiKeyE
     public override IEnumerable<CreateIndexModel<ApiKeyEntity>> Indices =>
     [
         new(Builders<ApiKeyEntity>.IndexKeys.Ascending(x => x.Key), new CreateIndexOptions { Unique = true, Name = nameof(ApiKeyEntity.Key) }),
-        new(Builders<ApiKeyEntity>.IndexKeys.Ascending(x => x.ApiKeyHash), new CreateIndexOptions { Unique = true, Name = nameof(ApiKeyEntity.ApiKeyHash) })
+        new(Builders<ApiKeyEntity>.IndexKeys.Ascending(x => x.ApiKeyHash), new CreateIndexOptions { Unique = true, Name = nameof(ApiKeyEntity.ApiKeyHash) }),
+        new(Builders<ApiKeyEntity>.IndexKeys.Ascending(x => x.ApiKeyPrefix), new CreateIndexOptions { Sparse = true, Name = nameof(ApiKeyEntity.ApiKeyPrefix) })
     ];
 }
