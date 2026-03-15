@@ -142,7 +142,7 @@ public class ApiKeyAuthenticationHandlerTests
     }
 
     [Fact]
-    public async Task With_Valid_ApiKey_Defaults_AccessLevel_To_Administrator()
+    public async Task With_Valid_ApiKey_Without_Tags_Defaults_AccessLevel_To_Viewer()
     {
         var apiKey = CreateApiKey("team-123");
         _apiKeyService.GetByApiKeyAsync("valid-key").Returns(Task.FromResult(apiKey));
@@ -155,7 +155,7 @@ public class ApiKeyAuthenticationHandlerTests
         Assert.True(result.Succeeded);
         var accessLevelClaim = result.Principal.FindFirst(TeamClaimTypes.AccessLevel);
         Assert.NotNull(accessLevelClaim);
-        Assert.Equal("Administrator", accessLevelClaim.Value);
+        Assert.Equal("Viewer", accessLevelClaim.Value);
     }
 
     [Fact]

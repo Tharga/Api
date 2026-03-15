@@ -52,7 +52,7 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
         {
             var name = IntegerExtensions.GetNameForNumber(i + 1);
             var expiryDate = GetDefaultExpiryDate();
-            var entity = BuildKey(teamKey, name, [], AccessLevel.Administrator, null, expiryDate);
+            var entity = BuildKey(teamKey, name, [], AccessLevel.User, null, expiryDate);
             var created = await _repository.AddAsync(entity);
 
             if (_options.AutoLockKeys)

@@ -90,7 +90,12 @@ The proxy reads `TeamKey` and `AccessLevel` claims from `HttpContext.User`. Meth
 
 ### 6. API key access level
 
-The `AccessLevel` for API keys is read from `IApiKey.Tags["AccessLevel"]`. If not set, it defaults to `Administrator`. The access level hierarchy is:
+The `AccessLevel` for API keys is determined by:
+- **`ApiKeyEntity.AccessLevel`** field (stored on the entity). If null (legacy keys), defaults to `Administrator` for backwards compatibility.
+- **`IApiKey.Tags["AccessLevel"]`** fallback (custom implementations). If not set, defaults to `Viewer` (fail-closed).
+- **Auto-created keys** in simple mode get `User` access level.
+
+The access level hierarchy is:
 
 | Level | Can access |
 |-------|-----------|

@@ -77,11 +77,11 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 
         var accessLevelStr = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
             ? level
-            : AccessLevel.Administrator.ToString();
+            : AccessLevel.Viewer.ToString();
 
         var accessLevel = Enum.TryParse<AccessLevel>(accessLevelStr, out var parsed)
             ? parsed
-            : AccessLevel.Administrator;
+            : AccessLevel.Viewer;
 
         var roleStr = key.Tags.TryGetValue("TenantRoles", out var r)
             ? r.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
