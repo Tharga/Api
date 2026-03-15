@@ -41,6 +41,10 @@ public record ApiKeyEntity : EntityBase, IApiKey
     [BsonIgnoreIfNull]
     public string[] Roles { get; init; }
 
+    /// <summary>Individual scope overrides (additional scopes beyond AccessLevel and roles).</summary>
+    [BsonIgnoreIfNull]
+    public string[] ScopeOverrides { get; init; }
+
     /// <summary>Expiry date. Null means no expiry.</summary>
     [BsonIgnoreIfNull]
     public DateTime? ExpiryDate { get; init; }

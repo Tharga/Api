@@ -38,17 +38,19 @@ public class ScopeRegistry : IScopeRegistry
             .ToList();
     }
 
-    public IReadOnlyList<string> GetEffectiveScopes(AccessLevel accessLevel, IEnumerable<string> roleNames)
+    public IReadOnlyList<string> GetEffectiveScopes(AccessLevel accessLevel, IEnumerable<string> roleNames, IEnumerable<string> scopeOverrides = null)
     {
         var accessLevelScopes = GetScopesForAccessLevel(accessLevel);
 
-        if (_roleRegistry == null || roleNames == null)
-            return accessLevelScopes;
+        var roleScopes = _roleRegistry != null && roleNames != null
+            ? _roleRegistry.GetScopesForRoles(roleNames)
+            : Array.Empty<string>();
 
-        var roleScopes = _roleRegistry.GetScopesForRoles(roleNames);
+        var overrides = scopeOverrides ?? Array.Empty<string>();
 
         return accessLevelScopes
             .Union(roleScopes)
+            .Union(overrides)
             .Distinct()
             .ToList();
     }

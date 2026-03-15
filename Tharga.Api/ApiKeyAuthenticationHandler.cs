@@ -42,7 +42,7 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         if (key == null)
             return AuthenticateResult.Fail("Invalid API key.");
 
-        var (accessLevel, roleNames) = ResolveAccessLevelAndRoles(key);
+        var (accessLevel, roleNames, scopeOverrides) = ResolveKeyDetails(key);
 
         var claims = new List<Claim>
         {
@@ -53,7 +53,7 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
 
         if (_scopeRegistry != null)
         {
-            foreach (var scope in _scopeRegistry.GetEffectiveScopes(accessLevel, roleNames))
+            foreach (var scope in _scopeRegistry.GetEffectiveScopes(accessLevel, roleNames, scopeOverrides))
             {
                 claims.Add(new Claim(TeamClaimTypes.Scope, scope));
             }
@@ -66,13 +66,14 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
         return AuthenticateResult.Success(ticket);
     }
 
-    private static (AccessLevel accessLevel, string[] roleNames) ResolveAccessLevelAndRoles(IApiKey key)
+    private static (AccessLevel accessLevel, string[] roleNames, string[] scopeOverrides) ResolveKeyDetails(IApiKey key)
     {
         if (key is ApiKeyEntity entity)
         {
             var al = entity.AccessLevel ?? AccessLevel.Administrator;
             var roles = entity.Roles ?? Array.Empty<string>();
-            return (al, roles);
+            var overrides = entity.ScopeOverrides ?? Array.Empty<string>();
+            return (al, roles, overrides);
         }
 
         var accessLevelStr = key.Tags.TryGetValue(TeamClaimTypes.AccessLevel, out var level)
@@ -87,6 +88,6 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationS
             ? r.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : Array.Empty<string>();
 
-        return (accessLevel, roleStr);
+        return (accessLevel, roleStr, Array.Empty<string>());
     }
 }
