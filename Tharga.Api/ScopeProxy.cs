@@ -98,7 +98,11 @@ public class ScopeProxy<T> : DispatchProxy where T : class
             Success = success,
             ErrorMessage = errorMessage,
             CallerType = callerType,
-            CallerIdentity = user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value,
+            CorrelationId = Guid.TryParse(_httpContextAccessor.HttpContext?.TraceIdentifier, out var traceId) ? traceId : Guid.NewGuid(),
+            CallerIdentity = user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                ?? user?.FindFirst("preferred_username")?.Value
+                ?? user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? user?.FindFirst("name")?.Value,
             TeamKey = user?.FindFirst(TeamClaimTypes.TeamKey)?.Value,
             AccessLevel = user?.FindFirst(TeamClaimTypes.AccessLevel)?.Value,
             CallerSource = callerSource,

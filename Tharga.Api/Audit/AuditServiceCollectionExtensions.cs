@@ -40,8 +40,10 @@ public static class AuditServiceCollectionExtensions
             services.AddHostedService(sp => sp.GetRequiredService<MongoDbAuditLogger>());
         }
 
+        // Register as concrete type only — NOT as IAuditLogger to avoid circular dependency.
+        // CompositeAuditLogger takes IEnumerable<IAuditLogger> in its constructor,
+        // so registering it as IAuditLogger would create a circular resolution deadlock.
         services.AddSingleton<CompositeAuditLogger>();
-        services.AddSingleton<IAuditLogger>(sp => sp.GetRequiredService<CompositeAuditLogger>());
 
         return services;
     }
