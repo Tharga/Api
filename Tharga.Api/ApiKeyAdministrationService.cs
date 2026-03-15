@@ -90,6 +90,7 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     public async Task<IApiKey> RefreshKeyAsync(string teamKey, string key)
     {
         var item = await _repository.GetAsync(key);
+        VerifyTeamOwnership(item, teamKey);
         var refreshed = BuildKey(teamKey, item.Name, item.Tags, item.AccessLevel ?? AccessLevel.Administrator, item.Roles, item.ExpiryDate);
         await _repository.UpdateAsync(key, refreshed);
 
@@ -100,15 +101,25 @@ public class ApiKeyAdministrationService : IApiKeyAdministrationService
     }
 
     /// <inheritdoc />
-    public Task LockKeyAsync(string key)
+    public async Task LockKeyAsync(string teamKey, string key)
     {
-        return _repository.LockKeyAsync(key);
+        var item = await _repository.GetAsync(key);
+        VerifyTeamOwnership(item, teamKey);
+        await _repository.LockKeyAsync(key);
     }
 
     /// <inheritdoc />
-    public Task DeleteKeyAsync(string key)
+    public async Task DeleteKeyAsync(string teamKey, string key)
     {
-        return _repository.DeleteAsync(key);
+        var item = await _repository.GetAsync(key);
+        VerifyTeamOwnership(item, teamKey);
+        await _repository.DeleteAsync(key);
+    }
+
+    private static void VerifyTeamOwnership(ApiKeyEntity item, string teamKey)
+    {
+        if (item.TeamKey != teamKey)
+            throw new UnauthorizedAccessException($"API key does not belong to team '{teamKey}'.");
     }
 
     private DateTime? GetDefaultExpiryDate()

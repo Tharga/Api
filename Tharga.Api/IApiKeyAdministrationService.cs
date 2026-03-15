@@ -17,9 +17,9 @@ public interface IApiKeyAdministrationService
     /// <summary>Generates a new API key value for an existing key entry. Returns the entity with the raw key visible once.</summary>
     Task<IApiKey> RefreshKeyAsync(string teamKey, string key);
 
-    /// <summary>Locks an API key so it can no longer be used for authentication.</summary>
-    Task LockKeyAsync(string key);
+    /// <summary>Locks an API key so it can no longer be used for authentication. Verifies team ownership.</summary>
+    Task LockKeyAsync(string teamKey, string key);
 
-    /// <summary>Deletes an API key.</summary>
-    Task DeleteKeyAsync(string key);
+    /// <summary>Deletes an API key. Verifies team ownership.</summary>
+    Task DeleteKeyAsync(string teamKey, string key);
 }

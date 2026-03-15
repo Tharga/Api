@@ -15,8 +15,8 @@ public interface IApiKeyManagementService
     Task<IApiKey> RefreshKeyAsync(string teamKey, string key);
 
     [RequireScope(ApiKeyScopes.Manage)]
-    Task LockKeyAsync(string key);
+    Task LockKeyAsync(string teamKey, string key);
 
     [RequireScope(ApiKeyScopes.Manage)]
-    Task DeleteKeyAsync(string key);
+    Task DeleteKeyAsync(string teamKey, string key);
 }

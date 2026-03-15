@@ -78,11 +78,32 @@ public class ApiKeyAdministrationServiceTests
     }
 
     [Fact]
-    public async Task LockKeyAsync_Delegates_To_Repository()
+    public async Task LockKeyAsync_Verifies_Team_And_Delegates_To_Repository()
     {
-        await _sut.LockKeyAsync("key-1");
+        var entity = CreateEntity("key-1", "hash-1", "team-1");
+        _repository.GetAsync("key-1").Returns(Task.FromResult(entity));
+
+        await _sut.LockKeyAsync("team-1", "key-1");
 
         await _repository.Received(1).LockKeyAsync("key-1");
+    }
+
+    [Fact]
+    public async Task LockKeyAsync_Wrong_Team_Throws()
+    {
+        var entity = CreateEntity("key-1", "hash-1", "team-1");
+        _repository.GetAsync("key-1").Returns(Task.FromResult(entity));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.LockKeyAsync("team-2", "key-1"));
+    }
+
+    [Fact]
+    public async Task DeleteKeyAsync_Wrong_Team_Throws()
+    {
+        var entity = CreateEntity("key-1", "hash-1", "team-1");
+        _repository.GetAsync("key-1").Returns(Task.FromResult(entity));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.DeleteKeyAsync("team-2", "key-1"));
     }
 
     private static ApiKeyEntity CreateEntity(string key, string hash, string teamKey)
